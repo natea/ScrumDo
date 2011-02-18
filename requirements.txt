@@ -1,4 +1,4 @@
--e git+https://github.com/pinax/pinax/#egg=Pinax
+-e git+git://github.com/pinax/pinax.git#egg=Pinax
 # requirements for Pinax
 --extra-index-url=http://dist.pinaxproject.com/dev/
 
