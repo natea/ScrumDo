@@ -1,1 +1,1 @@
-Pinax==0.7.3
+http://downloads.pinaxproject.com/Pinax-0.7.3-bundle.zip
