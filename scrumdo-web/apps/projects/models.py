@@ -22,6 +22,8 @@ from tagging.fields import TagField
 from tagging.models import Tag
 import tagging
 import re
+import random
+import string
 from itertools import groupby
 
 from django.core.urlresolvers import reverse
@@ -45,8 +47,7 @@ class SiteStats( models.Model ):
   def __unicode__(self):
       return "%s %d/%d/%d" % (self.date, self.project_count, self.story_count, self.user_count)
   
-class PointsLog( models.Model ):
-    
+class PointsLog( models.Model ):    
   date = models.DateField( auto_now=True );
   points_claimed = models.IntegerField();
   points_total = models.IntegerField();
@@ -85,6 +86,7 @@ class Project(Group):
     default_iteration = None
     
     use_assignee = models.BooleanField( default=False )
+    use_tasks = models.BooleanField( default=False )
     # This field is not used -- use_acceptance = models.BooleanField( default=False )
     use_extra_1 = models.BooleanField( default=False )    
     use_extra_2 = models.BooleanField( default=False )    
@@ -103,6 +105,9 @@ class Project(Group):
   
     organization = models.ForeignKey(Organization,related_name="projects", null=True, blank=True)
 
+    token = models.CharField(max_length=7, default=lambda: "".join(random.sample(string.lowercase + string.digits, 7)))
+
+    
 
     def getPointScale( self ):
       return self.POINT_RANGES[ self.point_scale_type ]
@@ -152,7 +157,10 @@ class Project(Group):
     def get_default_iteration( self ):
       if self.default_iteration == None:
         iterations = Iteration.objects.filter( project=self, default_iteration=True)
-        self.default_iteration = iterations[0]
+        if len(iterations) == 0:            
+            self.default_iteration = self.iterations.all()[0]  # Shouldn't really happen, but just in case.
+        else:
+            self.default_iteration = iterations[0]
       return self.default_iteration
       
     def get_current_iterations(self):
@@ -227,6 +235,9 @@ class Iteration( models.Model):
     return "%s / %s" % (self.project.name, self.name)
 
 
+    
+    
+    
 class Story( models.Model ):
   STATUS_TODO = 1
   STATUS_DOING = 2
@@ -289,6 +300,13 @@ class Story( models.Model ):
     except:
       return 0
   
+  def getExternalLink(self, extra_slug):
+      try:
+          link = self.external_links.get( extra_slug="basecamp" )
+      except:
+          return None
+      return link
+  
   @property
   def tags(self):
     r = "";
@@ -323,12 +341,14 @@ class Story( models.Model ):
   def __unicode__(self):
       return "[%s/#%d] %s" % (self.project.name, self.local_id, self.summary)
 
+  def get_absolute_url(self):
+    return (self.iteration.get_absolute_url() + "#story_" + str(self.id)) 
+
         
   
 def tag_callback(sender, instance, **kwargs):
 
   for tag_to_delete in instance.tags_to_delete:
-    print "Deleting " + tag_to_delete.name
     tag_to_delete.delete()
   for tag_to_add in instance.tags_to_add:
     tag_to_add = tag_to_add.strip()
@@ -346,7 +366,25 @@ def tag_callback(sender, instance, **kwargs):
 
 models.signals.post_save.connect(tag_callback, sender=Story)
 
-
+class Task( models.Model ):
+    story = models.ForeignKey(Story, related_name="tasks")
+    summary = models.TextField(blank=True)
+    assignee = models.ForeignKey(User, related_name="assigned_tasks", verbose_name=_('assignee'), null=True, blank=True)  
+    complete = models.BooleanField(default=False)
+    order = models.PositiveIntegerField( default=0 )
+    
+    def getExternalLink(self, extra_slug):
+        try:
+            link = self.external_links.get( extra_slug="basecamp" )
+        except:
+            return None
+        return link
+        
+    def __unicode__(self):
+        return "[%s/#%d] Task: %s" % (self.story.project.name, self.story.local_id, self.summary)
+    class Meta:
+        ordering = [ 'order' ]
+    
 
 class StoryTag( models.Model ):
   project = models.ForeignKey( Project , related_name="tags")

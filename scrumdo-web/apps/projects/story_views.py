@@ -28,6 +28,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.http import HttpResponse
 from django.core import serializers
 
+from projects.calculation import onDemandCalculateVelocity
+
 from xlrd import open_workbook
 
 from django.conf import settings
@@ -63,6 +65,7 @@ def set_story_status( request, group_slug, story_id, status):
       signals.story_status_changed.send( sender=request, story=story, user=request.user )
       statuses = [None, "TODO", "In Progress", "Reviewing", "Done"]
       story.activity_signal.send(sender=story, user=request.user, story=story, action="changed status", status=statuses[status], project=story.project)
+      onDemandCalculateVelocity( story.project )
   if( request.POST.get("return_type","mini") == "mini"):
     return render_to_response("stories/single_mini_story.html", {
         "story": story,
@@ -90,7 +93,8 @@ def delete_story( request, group_slug, story_id ):
     signals.story_deleted.send( sender=request, story=story, user=request.user )
     story.activity_signal.send(sender=story, user=request.user, story=story, action="deleted", project=story.project)
     story.sync_queue.clear()
-    story.delete()            
+    story.delete()        
+    onDemandCalculateVelocity( story.project ) 
     
     redirTo = request.GET.get("redirectTo", "")
     if redirTo:
@@ -161,6 +165,14 @@ def _calculate_rank( iteration, general_rank ):
     return round( iteration.stories.all().count() / 2)
   return iteration.stories.all().count()+1
 
+@login_required
+def story_block(request, story_id):
+    story = get_object_or_404( Story, id=story_id )
+    read_access_or_403( story.project, request.user )
+    return render_to_response("stories/single_block_story.html", {
+        "story": story,         
+        "return_type": "block",
+      }, context_instance=RequestContext(request))
 
 # Returns the edit-story form, with minimal html wrapper.  This is useful for displaying within
 # a facebox popup.
@@ -188,8 +200,9 @@ def story(request, group_slug, story_id):
       if len(diffs) > activities:
         # this means that we have not accounted for all the changes above, so add a generic story edited activity
         story.activity_signal.send(sender=story, user=request.user, story=story, action="edited", project=project)
-
+        
       signals.story_updated.send( sender=request, story=story, user=request.user )
+      onDemandCalculateVelocity( project )
 
     if( request.POST['return_type'] == 'mini'):
       return render_to_response("stories/single_mini_story.html", {
@@ -234,19 +247,23 @@ def stories_iteration(request, group_slug, iteration_id):
 
   tags_list = re.split('[, ]+', tags_search)
 
-  # There's probably a better way to set up these filters...
-  if text_search and tags_search:
-    stories = iteration.stories.filter(story_tags__tag__name__in=tags_list).extra( where = ["MATCH(summary, detail, extra_1, extra_2, extra_3) AGAINST (%s IN BOOLEAN MODE)"], params=[text_search]).distinct().order_by(order_by)
-  elif tags_search:
-    stories = iteration.stories.filter(story_tags__tag__name__in=tags_list).distinct().order_by(order_by)
-  elif text_search:
-    stories = iteration.stories.extra( where = ["MATCH(summary, detail, extra_1, extra_2, extra_3) AGAINST (%s IN BOOLEAN MODE)"], params=[text_search]).order_by(order_by)
-  else:
-    stories = iteration.stories.order_by(order_by)
+  stories = None
 
-  if only_assigned:
-      stories = stories.filter(assignee=request.user)
+  if request.GET.get("clearButton") != "Clear Filter":
+            
+      # There's probably a better way to set up these filters...
+      if text_search and tags_search:
+        stories = iteration.stories.filter(story_tags__tag__name__in=tags_list).extra( where = ["MATCH(summary, detail, extra_1, extra_2, extra_3) AGAINST (%s IN BOOLEAN MODE)"], params=[text_search]).distinct().order_by(order_by)
+      elif tags_search:
+        stories = iteration.stories.filter(story_tags__tag__name__in=tags_list).distinct().order_by(order_by)
+      elif text_search:
+        stories = iteration.stories.extra( where = ["MATCH(summary, detail, extra_1, extra_2, extra_3) AGAINST (%s IN BOOLEAN MODE)"], params=[text_search]).order_by(order_by)
+      if only_assigned:
+          stories = stories.filter(assignee=request.user)
 
+  if stories == None:
+      stories = iteration.stories.order_by(order_by)
+      
   return render_to_response("stories/mini_story_list.html", {
     "stories": stories,
     "project":project,
@@ -261,7 +278,7 @@ def ajax_add_story( request, group_slug):
   if request.method == "POST" and request.POST.get("action") == "addStory":
     form = AddStoryForm(project, request.POST) # A form bound to the POST data
     if form.is_valid(): # All validation rules pass
-      story = _handleAddStoryInternal( form , project, request)
+      story = _handleAddStoryInternal( form , project, request)      
       return render_to_response("stories/story_added.html", {"story": story}, context_instance=RequestContext(request))
   
   # A story wasn't created...
@@ -287,6 +304,9 @@ def _handleAddStoryInternal( form , project, request):
   story.rank = _calculate_rank( story.iteration, int(form.cleaned_data['general_rank']) )
   logger.info("New Story %s" % story.summary)
   story.save()
+  if story.points_value() > 0:
+      onDemandCalculateVelocity( project )
+  signals.story_created.send( sender=request, story=story, user=request.user )
   story.activity_signal.send(sender=story, user=request.user, story=story, action="created", project=project)
   request.user.message_set.create(message="Story #%d created." % story.local_id )
   return story

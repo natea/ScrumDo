@@ -195,6 +195,7 @@ INSTALLED_APPS = (
     'django_evolution',
     'extras',
     'activities',
+    'poker',
 #    'debug_toolbar',
 )
 
@@ -220,8 +221,8 @@ ACCOUNT_EMAIL_VERIFICATION = False
 
 EMAIL_CONFIRMATION_DAYS = 2
 EMAIL_DEBUG = DEBUG
-CONTACT_EMAIL = "scrumdo@scrumdo.com"
-SITE_NAME = "ScrumDo"
+
+SITE_NAME = "ScrumDo Community Site"
 LOGIN_URL = "/account/login/"
 LOGIN_REDIRECT_URLNAME = "projects.views.home"
 
@@ -230,8 +231,11 @@ EMAIL_HOST='localhost'
 EMAIL_HOST_USER=''                  
 EMAIL_HOST_PASSWORD=''        
 EMAIL_PORT='25'
-DEFAULT_FROM_EMAIL = 'noreply@scrumdo.com'   
-SERVER_EMAIL = 'noreply@scrumdo.com'
+
+CONTACT_EMAIL = "help@example.com"
+DEFAULT_FROM_EMAIL = 'noreply@example.com'   
+SERVER_EMAIL = 'noreply@example.com'
+SUPPORT_URL = "http://support.example.com/"
 
 GOOGLE_ANALYTICS = False
 GOOGLE_ANALYTICS_ACCOUNT = ""
@@ -240,11 +244,15 @@ CACHE_BACKEND = 'locmem://'
 
 INTERNAL_IPS = ('127.0.0.1',)
 
-SUPPORT_URL = "http://support.scrumdo.com/"
+BASE_URL="http://localhost:8000"
 
-SCRUMDO_EXTRAS = ("extras.plugins.github_issues.GitHubIssuesExtra",
-                  "extras.plugins.example.ExampleExtra",)
+SCRUMDO_EXTRAS = ()
+ #"extras.plugins.github_issues.GitHubIssuesExtra",
+ #                 "extras.plugins.example.ExampleExtra",)
 
+
+HOOKBOX_HOST = "http://192.168.1.125:8080"
+HOOKBOX_SECRET = "juy789"
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

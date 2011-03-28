@@ -28,12 +28,15 @@ class Limit(object) :
 personal_project_limit      = Limit( providing_args=["user"] )
 personal_user_limit         = Limit( providing_args=["user","userToAdd"] )
 personal_storage_limit      = Limit( providing_args=["user"] )    
+personal_extra_limit        = Limit( providing_args=["project"] )
 
 # Limits related to an organization:
 org_project_limit      = Limit( providing_args=["organization"] )
 org_user_limit         = Limit( providing_args=["organization","userToAdd"] )
 org_storage_limit      = Limit( providing_args=["organization"] )
+org_extra_limit        = Limit( providing_args=["organization"] )
 
+on_demand_velocity     = Limit( providing_args=["project"] )
 
 # Helper methods:
 def userIncreasedAlowed( project, user, userToAdd):

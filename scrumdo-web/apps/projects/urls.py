@@ -34,11 +34,12 @@ urlpatterns = patterns('projects.views',
     url(r'^project/(?P<group_slug>[-\w]+)/admin$', 'project_admin', name="project_admin"),
     url(r'^project/(?P<group_slug>[-\w]+)/fix_local_id$', 'fix_local_id', name="fix_local_id"),
     url(r'^project/(?P<group_slug>[-\w]+)/history$', 'project_history', name="project_history"),    
-    url(r'^project/(?P<group_slug>[-\w]+)/test_data/(?P<count>[0-9]+)', 'test_data'),    
-    
+    url(r'^project/(?P<group_slug>[-\w]+)/test_data/(?P<count>[0-9]+)', 'test_data'),        
     url(r'^project/(?P<group_slug>[-\w]+)/(?P<iteration_id>[-\w]+)/burndown$', 'iteration_burndown'),    
     url(r'^project/(?P<group_slug>[-\w]+)/burndown$', 'project_burndown'),    
     url(r'^project/(?P<group_slug>[-\w]+)/project_prediction$', 'project_prediction', name="project_prediction"),    
+    url(r'^project/(?P<group_slug>[-\w]+)/export$', 'export_project', name="export_project"),    
+    
 )
 
 urlpatterns += patterns('projects.iteration_views',
@@ -64,10 +65,16 @@ urlpatterns += patterns('projects.story_views',
     url(r'^project/(?P<group_slug>[-\w]+)/story/(?P<story_id>[-\w]+)/set_done', 'set_story_status', {'status':4}),
     url(r'^project/(?P<group_slug>[-\w]+)/story/(?P<story_id>[-\w]+)/reorder', 'reorder_story'),
     url(r'^project/(?P<group_slug>[-\w]+)/story/(?P<story_id>[-\w]+)/delete', 'delete_story', name="delete_story"),
+    url(r'^story/(?P<story_id>[-\w]+)', 'story_block', name="story_block"),    
     url(r'^project/(?P<group_slug>[-\w]+)/story/(?P<story_id>[-\w]+)', 'story', name="story_form"),
     url(r'^project/(?P<group_slug>[-\w]+)/mini_story/(?P<story_id>[-\w]+)', 'mini_story'),    
+)
 
-    
+urlpatterns += patterns('projects.task_views',
+    url(r'^task/create$', 'create_task', name="create_task"),
+    url(r'^task/(?P<task_id>[0-9]+)/set_status$', 'set_task_status', name="set_task_status"),
+    url(r'^task/(?P<task_id>[0-9]+)/delete$', 'delete_task', name="delete_task"),
+    url(r'^task/(?P<task_id>[0-9]+)/edit$', 'edit_task', name="edit_task"),
 )
 
 # urlpatterns += bridge.include_urls('tasks.urls', r'^project/(?P<group_slug>[-\w]+)/tasks/')

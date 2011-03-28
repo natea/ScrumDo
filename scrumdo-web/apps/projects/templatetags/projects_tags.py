@@ -24,12 +24,27 @@ from django.template.defaultfilters import stringfilter
 import re
 register = template.Library()
 
-urlfinder = re.compile('(http:\/\/\S+)')
+urlfinder = re.compile('(http:\/\/[^\s<>]+)')
 
 
 @register.filter("urlify2")
 def urlify2(value):
     return urlfinder.sub(r'<a target="_blank" href="\1">\1</a>', value)
+
+@register.filter("probable_email")
+def probable_email(user):
+    if len(user.email) > 0:
+        return user.email
+    addrs = user.emailaddress_set.all()
+    for email in addrs:
+        if email.verified:
+            return email.email
+            
+    # no verified, no primary emails...
+    if len(addrs) > 0:
+        return addrs[0].email
+        
+    return ""
 
 @stringfilter
 def link_stories(value, project):
