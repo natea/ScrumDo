@@ -1,0 +1,2 @@
+# check out the 0.7.X branch of Pinax
+-e git+git://github.com/pinax/pinax.git@0.7.X#egg=Pinax
